@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jogo da Vida · Projetor</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='55' r='38' fill='%23FFD449'/></svg>">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body class="host-body">
+<div id="viewport">
+  <div id="stage">
+    <svg id="scene" viewBox="0 0 1600 900" width="1600" height="900" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div id="under" style="position:absolute;inset:0;pointer-events:none"></div>
+    <div id="signs" style="position:absolute;inset:0;pointer-events:none"></div>
+    <div id="pawns"></div>
+    <div id="hud" class="hud"></div>
+    <div id="overlay" style="position:absolute;inset:0;pointer-events:none"></div>
+  </div>
+</div>
+
+<div id="controls">
+  <button class="btn ghost" id="c-prev" title="Voltar (←)">◀</button>
+  <span class="phase" id="c-phase">…</span>
+  <button class="btn coral" id="c-next" title="Próximo (espaço)">Próximo</button>
+  <button class="btn ghost" id="c-extend" title="+15 segundos">+15 s</button>
+  <button class="btn ghost" id="c-matrix" title="Matriz (M)">Matriz</button>
+  <button class="btn ghost" id="c-admin" title="Painel (A)">⚙</button>
+  <button class="btn ghost" id="c-full" title="Tela cheia (F)">⛶</button>
+</div>
+<div id="drawer" class="hidden"><div class="admin" id="drawer-admin" style="padding:0"></div></div>
+
+<div id="keygate" class="hidden" style="position:fixed;inset:0;display:grid;place-items:center;background:var(--cream);z-index:60">
+  <div class="card keybox admin" style="width:420px">
+    <h2 style="margin-top:0">Projetor · chave de admin</h2>
+    <input id="key" type="password" placeholder="digite a chave" style="border:3px solid var(--line);border-radius:14px;padding:12px;font-size:20px;width:100%;margin:12px 0">
+    <button class="btn coral big" id="enter">Entrar</button>
+    <p id="kerr" style="color:#B4232A"></p>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script type="module" src="/host.js"></script>
+</body>
+</html>

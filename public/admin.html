@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Admin · Jogo da Vida</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='55' r='38' fill='%23FF7A6B'/></svg>">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<main class="admin">
+  <div class="brand"><h1>Jogo da <span>Vida</span></h1><small>Painel do admin</small></div>
+  <div id="keybox" class="card keybox hidden">
+    <b>Chave de admin</b>
+    <input id="key" type="password" placeholder="digite a chave">
+    <button class="btn coral big" id="enter">Entrar</button>
+    <p id="kerr" style="color:#B4232A"></p>
+  </div>
+  <div id="panel" class="hidden"></div>
+</main>
+<script src="/socket.io/socket.io.js"></script>
+<script type="module">
+  import { mountAdmin, updateAdmin, connectHost } from '/shared/controls.js';
+  const panel = document.getElementById('panel');
+  const keybox = document.getElementById('keybox');
+  let mounted = false;
+  const conn = connectHost(s => {
+    keybox.classList.add('hidden');
+    panel.classList.remove('hidden');
+    if (!mounted) { mountAdmin(panel, (ev, p) => conn.send(ev, p)); mounted = true; }
+    updateAdmin(panel, s);
+  }, err => {
+    keybox.classList.remove('hidden');
+    panel.classList.add('hidden');
+    document.getElementById('kerr').textContent = err || '';
+  });
+  document.getElementById('enter').onclick = () => conn.setKey(document.getElementById('key').value.trim());
+  document.getElementById('key').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('enter').click(); });
+</script>
+</body>
+</html>

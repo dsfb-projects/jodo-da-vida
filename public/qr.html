@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Entre no Jogo da Vida</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="qrpage">
+  <div>
+    <div class="brand"><h1 style="font-size:54px">Jogo da <span>Vida</span></h1><small style="font-size:22px">Escaneie para entrar</small></div>
+    <img src="/qr.svg" alt="QR code">
+    <div style="margin-top:18px"><span class="joinurl" id="u"></span></div>
+  </div>
+</div>
+<script>
+  fetch('/join-url').then(r => r.json()).then(j => { document.getElementById('u').textContent = j.url.replace(/^https?:\/\//, '').replace(/\/$/, ''); });
+</script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Galeria de avatares</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #FFF6E9; color: #2B2140; margin: 20px; }
+  h2 { margin: 18px 0 6px; font-size: 16px; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; }
+  .cell { width: 84px; text-align: center; font-size: 11px; }
+  .cell svg { width: 76px; height: 76px; overflow: visible; }
+</style>
+</head>
+<body>
+<div id="out"></div>
+<script type="module">
+  import { avatarSVG, TABS } from '/shared/avatar.js';
+  const base = { c: 6, s: 0, e: 1, m: 0, t: 0, k: 0, g: 0, v: 0, vc: 5 };
+  let html = '';
+  for (const t of TABS) {
+    html += `<h2>${t.label}</h2><div class="row">`;
+    for (let i = 0; i < t.count; i++) {
+      const a = { ...base, [t.key]: i };
+      if (t.key === 'k') a.t = 2;
+      html += `<div class="cell">${avatarSVG(a)}<div>${t.names ? t.names[i] : i}</div></div>`;
+    }
+    html += '</div>';
+  }
+  document.getElementById('out').innerHTML = html;
+</script>
+</body>
+</html>

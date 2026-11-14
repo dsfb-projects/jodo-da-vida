@@ -1,0 +1,23 @@
+{
+  "name": "jogo-da-vida",
+  "version": "1.0.0",
+  "description": "Jogo da Vida: dinâmica multiplayer de teoria dos jogos (Neuroeconomia, FAE)",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "bots": "node scripts/bots.js 30",
+    "bots:drop": "node scripts/bots.js 30 http://localhost:3000 --drop"
+  },
+  "dependencies": {
+    "express": "^4.22.3",
+    "qrcode": "^1.5.4",
+    "socket.io": "^4.8.4"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "private": true,
+  "devDependencies": {
+    "socket.io-client": "^4.8.4"
+  }
+}

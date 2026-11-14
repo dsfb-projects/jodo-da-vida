@@ -1,0 +1,72 @@
+{
+  "titulo": "Jogo da Vida",
+  "subtitulo": "Neuroeconomia · Teoria dos Jogos",
+  "nomePilares": "pilares",
+  "pilares": [
+    { "id": "academica", "nome": "Vida acadêmica", "curto": "Acadêmica", "icone": "🎓", "cor": "#6C8CFF" },
+    { "id": "pessoal", "nome": "Vida pessoal", "curto": "Pessoal", "icone": "❤️", "cor": "#FF6F91" },
+    { "id": "profissional", "nome": "Vida profissional", "curto": "Profissional", "icone": "💼", "cor": "#FFB238" }
+  ],
+  "pontosIniciais": 10,
+  "limiarEquilibrio": 3,
+  "segundosPorDecisao": 40,
+  "encerrarAoZerar": true,
+  "cursos": ["Ciência de Dados", "Publicidade e Propaganda"],
+
+  "decisoes": [
+    {
+      "apresentador": "Léo",
+      "titulo": "Comer, dormir ou estudar?",
+      "cenario": "PROVISÓRIO: Reta final do bimestre. Você chega em casa às 23h, sem jantar, morto de cansaço, e tem entrega amanhã cedo.",
+      "tema": "noite",
+      "opcoes": [
+        { "texto": "Comer", "icone": "🍜", "efeito": { "academica": -1, "pessoal": 2, "profissional": 0 } },
+        { "texto": "Dormir", "icone": "😴", "efeito": { "academica": -1, "pessoal": 1, "profissional": 1 } },
+        { "texto": "Estudar", "icone": "📚", "efeito": { "academica": 3, "pessoal": -2, "profissional": -1 } }
+      ]
+    },
+    {
+      "apresentador": "Matheus",
+      "titulo": "Ir ou não ir à aula?",
+      "cenario": "PROVISÓRIO: Quarta-feira, chovendo, você saiu tarde do trabalho e a aula começa em 20 minutos.",
+      "tema": "chuva",
+      "opcoes": [
+        { "texto": "Ir à aula", "icone": "🏫", "efeito": { "academica": 2, "pessoal": -1, "profissional": -1 } },
+        { "texto": "Não ir", "icone": "🛋️", "efeito": { "academica": -2, "pessoal": 2, "profissional": 0 } }
+      ]
+    },
+    {
+      "apresentador": "Wellington",
+      "titulo": "Bar ou adiantar o trabalho?",
+      "cenario": "PROVISÓRIO: Sexta à noite. A galera chamou pro bar, mas tem uma promoção em jogo e um relatório pra segunda.",
+      "tema": "cidade",
+      "opcoes": [
+        { "texto": "Bar com a galera", "icone": "🍻", "efeito": { "academica": 0, "pessoal": 3, "profissional": -2 } },
+        { "texto": "Adiantar o trabalho", "icone": "💻", "efeito": { "academica": -1, "pessoal": -2, "profissional": 3 } }
+      ]
+    },
+    {
+      "apresentador": "Léo",
+      "titulo": "O TCC bate na porta",
+      "cenario": "PROVISÓRIO: Aula de Neuroeconomia, TCC vence em 10 dias e o notebook está aberto na sua frente.",
+      "tema": "dia",
+      "opcoes": [
+        { "texto": "Prestar atenção na aula", "icone": "🧠", "efeito": { "academica": 1, "pessoal": 1, "profissional": 0 } },
+        { "texto": "Fazer o TCC escondido", "icone": "🤫", "efeito": { "academica": -2, "pessoal": -2, "profissional": 0 } }
+      ]
+    }
+  ],
+
+  "perfis": {
+    "academica": { "nome": "Perfil Acadêmico", "descricao": "Priorizou os estudos acima de tudo." },
+    "pessoal": { "nome": "Perfil Pessoal", "descricao": "Colocou a vida pessoal na frente." },
+    "profissional": { "nome": "Perfil Profissional", "descricao": "Apostou tudo na carreira." },
+    "equilibrado": { "nome": "Equilibrado", "descricao": "Conseguiu segurar os três pilares." }
+  },
+
+  "veredito": {
+    "academica": { "ruim": "Vida acadêmica: vocês reprovaram na matéria / TCC reprovado", "bom": "PROVISÓRIO: Vida acadêmica: aprovados, TCC entregue" },
+    "pessoal": { "ruim": "Vida pessoal: vocês ficaram sem um date", "bom": "PROVISÓRIO: Vida pessoal: date confirmado" },
+    "profissional": { "ruim": "Vida profissional: a promoção não veio", "bom": "PROVISÓRIO: Vida profissional: promoção garantida" }
+  }
+}
