@@ -53,7 +53,6 @@ Tudo fica em **`content/decisoes.json`**, sem mexer em código:
 - `perfis`: textos do resultado de cada um.
 - `mostrarRanking`: `false` pula o ranking (o fim vai direto do resultado da turma para o lobby).
 
-> Os textos marcados com **PROVISÓRIO** e todos os valores de `efeito` são placeholders: o grupo define.
 
 ## Rodar local
 
