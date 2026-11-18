@@ -3,7 +3,8 @@ import { avatarSVG } from '/shared/avatar.js';
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-const lastFinal = s => (s.config && s.config.mostrarRanking === false ? 0 : 1);
+// fim: 0 resultado da turma, 1 grupos, 2 ranking (o ranking também abre pelo botão 🏆)
+const lastFinal = s => (s.config && s.config.mostrarRanking === false ? 1 : 2);
 export const isResetStep = s => !!s && s.phase === 'final' && s.finalStep >= lastFinal(s);
 
 // "Voltar ao início" apaga os votos: pede um segundo toque em até 3 s
@@ -19,6 +20,10 @@ export function armOrRun(btn, run) {
   btn._armTimer = setTimeout(() => { delete btn.dataset.armed; btn.textContent = '🔄 Voltar ao início'; }, 3000);
 }
 
+// botão 🏆: abre o ranking; dentro do ranking, volta para os grupos
+export const rankToggleStep = s => (s && s.finalStep === 2 ? 1 : 2);
+export const rankToggleLabel = s => (s && s.phase === 'final' && s.finalStep === 2 ? '🎉 Grupos' : '🏆 Ranking');
+
 export function nextLabel(s) {
   const last = s.config.totalDecisoes - 1;
   switch (s.phase) {
@@ -26,7 +31,7 @@ export function nextLabel(s) {
     case 'intro': return '▶ Abrir votação';
     case 'question': return '⏹ Encerrar votação';
     case 'reveal': return s.d < last ? '▶ Próxima decisão' : '🏁 Ver resultado';
-    case 'final': return s.finalStep < lastFinal(s) ? '🏆 Mostrar ranking' : '🔄 Voltar ao início';
+    case 'final': return isResetStep(s) ? '🔄 Voltar ao início' : s.finalStep === 0 ? '🎉 Ver os grupos' : '🏆 Mostrar ranking';
     default: return 'Próximo';
   }
 }
@@ -38,7 +43,7 @@ export function phaseLabel(s) {
     case 'intro': return `Decisão ${n} · contando a história`;
     case 'question': return `Decisão ${n} · votação aberta`;
     case 'reveal': return `Decisão ${n} · revelação`;
-    case 'final': return s.finalStep < 1 ? 'Resultado da turma' : 'Ranking';
+    case 'final': return ['Resultado da turma', 'Grupos', 'Ranking'][s.finalStep] || 'Fim';
     default: return s.phase;
   }
 }
@@ -49,7 +54,7 @@ export function mountAdmin(root, send) {
   root.innerHTML = `
     <div class="card status" id="a-status"></div>
     <div class="mainbtns"><button class="btn ghost" data-act="prev">◀ Voltar</button><button class="btn coral" data-act="next" id="a-next">Próximo</button></div>
-    <div class="row2"><button class="btn ghost" data-act="extend">+15 s</button><button class="btn ghost" data-act="matrix" id="a-matrix">Matriz</button></div>
+    <div class="row3"><button class="btn ghost" data-act="extend">+15 s</button><button class="btn ghost" data-act="matrix" id="a-matrix">Matriz</button><button class="btn ghost" data-act="rank" id="a-rank">🏆 Ranking</button></div>
     <h2>Modo manual (escolha da turma)</h2>
     <p style="margin:0 0 8px;color:var(--ink-soft);font-size:14px">Se o celular do pessoal falhar, marque aqui o que a turma escolheu. Vale para a média da turma (a estrela no gráfico final).</p>
     <div id="a-manual"></div>
@@ -80,6 +85,7 @@ export function mountAdmin(root, send) {
     else if (act === 'prev') send('host:prev');
     else if (act === 'extend') send('host:extend', { seconds: 15 });
     else if (act === 'matrix') send('host:matrix', {});
+    else if (act === 'rank') send('host:final', { step: rankToggleStep(lastState) });
     else if (act === 'manual') send('host:manual', { d: Number(b.dataset.d), opt: b.dataset.opt === '' ? null : Number(b.dataset.opt) });
     else if (act === 'kick') send('host:kick', { id: b.dataset.id });
     else if (act === 'rmcourse') send('host:course:remove', { name: b.dataset.name });
@@ -107,6 +113,9 @@ export function updateAdmin(root, s) {
   const mx = root.querySelector('#a-matrix');
   mx.disabled = s.phase !== 'reveal';
   mx.textContent = s.showMatrix ? 'Esconder matriz' : 'Mostrar matriz';
+  const rb = root.querySelector('#a-rank');
+  rb.disabled = s.phase !== 'final';
+  rb.textContent = rankToggleLabel(s);
 
   root.querySelector('#a-manual').innerHTML = (s.allDecisions || []).map((d, i) => {
     const cur = s.manual && s.manual[i] != null ? Number(s.manual[i]) : null;

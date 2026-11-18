@@ -16,15 +16,17 @@ Roteiro da apresentação: slides (intro + diários) → **jogo** → slides (co
 
 ## Fluxo de uma partida
 
-`lobby → (para cada decisão) história → votação → revelação → … → resultado da turma → ranking → volta ao lobby`
+`lobby → (para cada decisão) história → votação → revelação → … → resultado da turma → grupos → (ranking) → volta ao lobby`
 
 - **Próximo** avança uma etapa. **Voltar** desfaz (voltar da revelação reabre a votação sem apagar votos).
 - Na votação aparece o cronômetro e o contador `28/34 responderam · faltam 6`. Ao zerar o tempo a votação fecha sozinha (`encerrarAoZerar`). **+15 s** estende.
 - Na revelação os avatares saem da largada e vão pelo caminho que escolheram (de carro, bike, skate, patinete…), sem os nomes, para ninguém ficar exposto. Quem não respondeu fica parado na largada.
 - No celular, a revelação mostra só a escolha da pessoa, sem pontos. Os pontos aparecem no resultado final.
-- No ranking, **Voltar ao início** leva todo mundo de volta ao lobby (mantém os jogadores, zera os votos). Pede um segundo toque para confirmar.
+- **Grupos:** todo mundo comemorando, cada um no grupo do seu perfil (se todos caírem no mesmo perfil, aparece um grupo só).
+- **🏆 Ranking:** botão na barra do projetor (ou tecla `R`) e no admin. Abre o ranking a qualquer momento do fim; dentro dele, volta para os grupos.
+- Na última tela, **Voltar ao início** leva todo mundo de volta ao lobby (mantém os jogadores, zera os votos). Pede um segundo toque para confirmar.
 - **Matriz** mostra a matriz de payoff que estava escondida (só depois da escolha, para não influenciar).
-- Atalhos no projetor: `espaço` ou `→` avança, `←` volta, `M` matriz, `A` painel admin, `F` tela cheia, `H` esconde a barra.
+- Atalhos no projetor: `espaço` ou `→` avança, `←` volta, `M` matriz, `R` ranking, `A` painel admin, `F` tela cheia, `H` esconde a barra.
 
 ### Pontuação
 
@@ -51,7 +53,7 @@ Tudo fica em **`content/decisoes.json`**, sem mexer em código:
 - `pilares`: nome, ícone e cor de cada pilar. `nomePilares` é a palavra usada nas telas.
 - `cursos`: cursos iniciais (dá para adicionar mais ao vivo no admin).
 - `perfis`: textos do resultado de cada um.
-- `mostrarRanking`: `false` pula o ranking (o fim vai direto do resultado da turma para o lobby).
+- `mostrarRanking`: `true` coloca o ranking na sequência depois dos grupos; `false` deixa o ranking só no botão 🏆.
 
 
 ## Rodar local

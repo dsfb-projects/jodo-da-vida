@@ -315,11 +315,8 @@ function screenHTML(s) {
       if (!f) return `<div class="card panel"><h2>Fim de jogo!</h2></div>`;
       const perfil = cfg().perfis[f.profile] || { nome: f.profile, descricao: '' };
       let rank = '';
-      if (cfg().mostrarRanking !== false) {
-        rank = s.finalStep >= 1
-          ? `<div class="rank">#${f.rank}</div><p>de ${f.of} jogadores no ranking de equilíbrio</p>`
-          : `<p class="lookup">👀 O ranking vai aparecer no telão</p>`;
-      }
+      if (s.finalStep === 2) rank = `<div class="rank">#${f.rank}</div><p>de ${f.of} jogadores no ranking de equilíbrio</p>`;
+      else if (s.finalStep === 1) rank = `<p class="lookup">🎉 Ache você no grupo ${esc(perfil.nome.replace(/^Perfil\s+/i, ''))} no telão</p>`;
       return `${previewHTML(me.avatar, me.nick, 110)}
         <div class="card panel"><span class="kicker">Seu resultado</span><div class="profile-name">${esc(perfil.nome)}</div><p>${esc(perfil.descricao)}</p>
         ${barsHTML(f.scores)}<p><b>Nota de equilíbrio: ${f.equilibrio}</b> (seu pilar mais baixo)</p>${rank}</div>`;

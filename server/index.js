@@ -204,6 +204,7 @@ io.on('connection', socket => {
   hostCmd('host:prev', () => game.prev());
   hostCmd('host:close', () => game.close());
   hostCmd('host:extend', m => game.extend(Number(m.seconds) || 15));
+  hostCmd('host:final', m => game.setFinalStep(Number(m.step)));
   hostCmd('host:matrix', m => { game.showMatrix = m.show == null ? !game.showMatrix : !!m.show; });
   hostCmd('host:manual', m => {
     const d = Number(m.d);

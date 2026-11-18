@@ -24,7 +24,7 @@ Visão pessoal (`state`): `phase`, `d`, `finalStep`, `deadline`, `serverNow`, `c
 
 `host:hello { key }` → `{ ok, state }`. Depois disso o socket recebe `host:state` a cada mudança.
 
-Comandos: `host:next`, `host:prev`, `host:close`, `host:extend { seconds }`, `host:matrix { show? }`, `host:manual { d, opt|null }`, `host:course:add { name }`, `host:course:remove { name }`, `host:kick { id }`, `host:reset { players }`.
+Comandos: `host:next`, `host:prev`, `host:close`, `host:extend { seconds }`, `host:final { step }` (fim: 0 turma, 1 grupos, 2 ranking), `host:matrix { show? }`, `host:manual { d, opt|null }`, `host:course:add { name }`, `host:course:remove { name }`, `host:kick { id }`, `host:reset { players }`.
 
 Visão do host: tudo da visão comum + `players[]` (`id, nick, course, avatar, connected, voted, vote`), `decision`, `allDecisions`, `showMatrix`, `manual`, `counts`, `classScores`, e no final `ranking[]`. Durante a votação o host só sabe **quem** votou, não **no quê**.
 

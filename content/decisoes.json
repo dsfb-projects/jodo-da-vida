@@ -18,7 +18,7 @@
     {
       "apresentador": "Léo",
       "titulo": "Comer, dormir ou estudar?",
-      "cenario": "Reta final do bimestre. Você chega em casa às 23h, sem jantar, morto de cansaço, e tem entrega amanhã cedo.",
+      "cenario": "Reta final do bimestre. Você chega em casa às 23h, sem jantar, morto de cansaço, e tem que trabalhar amanhã cedo.",
       "tema": "noite",
       "opcoes": [
         { "texto": "Comer", "icone": "🍜", "efeito": { "academica": -1, "pessoal": 2, "profissional": 0 } },
@@ -53,8 +53,8 @@
       "cenario": "Aula de Neuroeconomia, a entrega do TCC é em 10 dias e o notebook está aberto na sua frente.",
       "tema": "dia",
       "opcoes": [
-        { "texto": "Prestar atenção na aula", "icone": "🧠", "efeito": { "academica": 1, "pessoal": 1, "profissional": 0 } },
-        { "texto": "Fazer o TCC escondido", "icone": "🤫", "efeito": { "academica": -2, "pessoal": -2, "profissional": 0 } }
+        { "texto": "Prestar atenção na aula", "icone": "🧠", "efeito": { "academica": 1, "pessoal": -1, "profissional": 0 } },
+        { "texto": "Fazer o TCC escondido", "icone": "🤫", "efeito": { "academica": -1, "pessoal": 1, "profissional": 0 } }
       ]
     }
   ],

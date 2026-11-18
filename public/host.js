@@ -1,5 +1,5 @@
 import { avatarSVG, shade } from '/shared/avatar.js';
-import { mountAdmin, updateAdmin, connectHost, nextLabel, phaseLabel, isResetStep, armOrRun } from '/shared/controls.js';
+import { mountAdmin, updateAdmin, connectHost, nextLabel, phaseLabel, isResetStep, armOrRun, rankToggleStep, rankToggleLabel } from '/shared/controls.js';
 
 const W = 1600, H = 900;
 const stage = document.getElementById('stage');
@@ -543,12 +543,48 @@ function finalRankHTML(s) {
     const vals = s.config.pilares.map(pl => `${pl.icone}${r.scores[pl.id]}`).join('  ');
     return `<div class="card r"><span style="color:var(--coral)">${r.rank}º</span>${avatarSVG(p.avatar || {})}<div>${esc(p.nick || '?')}<div class="vals">${vals}</div></div><span>nota ${r.equilibrio}</span></div>`;
   }).join('');
-  const conf = Array.from({ length: 90 }, (_, k) => {
-    const cols = ['#FF7A6B', '#FFD449', '#5FD4A0', '#5BB8FF', '#A98BFF', '#FF8FC7'];
-    return `<div class="confetti" style="left:${Math.random() * 1600}px;background:${cols[k % cols.length]};animation-duration:${2.5 + Math.random() * 2.5}s;animation-delay:${Math.random() * 1.5}s"></div>`;
-  }).join('');
   return `<div class="final" style="background:var(--cream)"><h1>Quem equilibrou melhor a vida<small>nota = o pilar mais baixo · desempate: soma, depois rapidez</small></h1>
-    <div class="podium">${podium || '<p style="font-size:28px">Sem jogadores no ranking.</p>'}</div><div class="ranklist">${list}</div>${conf}</div>`;
+    <div class="podium">${podium || '<p style="font-size:28px">Sem jogadores no ranking.</p>'}</div><div class="ranklist">${list}</div>${confettiHTML()}</div>`;
+}
+
+function confettiHTML(n = 90) {
+  const cols = ['#FF7A6B', '#FFD449', '#5FD4A0', '#5BB8FF', '#A98BFF', '#FF8FC7'];
+  return Array.from({ length: n }, (_, k) =>
+    `<div class="confetti" style="left:${Math.random() * 1600}px;background:${cols[k % cols.length]};animation-duration:${2.5 + Math.random() * 2.5}s;animation-delay:${Math.random() * 1.5}s"></div>`).join('');
+}
+
+// todo mundo comemorando, cada um no grupo do seu perfil
+function finalGroupsHTML(s) {
+  const rk = s.ranking || [];
+  const byId = Object.fromEntries((s.players || []).map(p => [p.id, p]));
+  const groups = PROFILE_ORDER.map(id => ({ id, list: rk.filter(r => r.profile === id) })).filter(g => g.list.length);
+  if (!groups.length) return `<div class="final" style="background:var(--cream)"><h1>Cada um no seu grupo</h1><p style="font-size:28px">Sem jogadores.</p></div>`;
+  const total = rk.length;
+  const nameOf = id => ((s.config.perfis[id] || {}).nome || id).replace(/^Perfil\s+/i, '');
+  const iconOf = id => (s.config.pilares.find(p => p.id === id) || {}).icone || '⚖️';
+  const W = 1600 - 88, H = 700, gap = 22;
+  const avail = W - gap * (groups.length - 1);
+  let ws = groups.map(g => Math.max(330, avail * g.list.length / total));
+  const sum = ws.reduce((a, b) => a + b, 0);
+  ws = ws.map(w => w * avail / sum);
+  const title = groups.length === 1 ? `Todo mundo no ${esc(nameOf(groups[0].id))}!` : 'Cada um no seu grupo';
+  const cols = groups.map((g, i) => {
+    const n = g.list.length, w = ws[i];
+    // maior tamanho de boneco que cabe no grupo sem cortar ninguém
+    let sz = 150, nf = 20;
+    for (; sz > 34; sz -= 4) {
+      nf = Math.max(12, Math.min(20, Math.round(sz * 0.19)));
+      const cols = Math.floor((w - 36) / (sz * 1.3 + 4));
+      if (cols >= 1 && Math.ceil(n / cols) * (sz * 1.2 + nf + 22) <= H - 110) break;
+    }
+    const people = g.list.map(r => {
+      const p = byId[r.id] || {};
+      return `<div class="gp" style="width:${Math.round(sz * 1.3)}px;padding-top:${Math.round(sz * 0.2)}px"><div class="hop party" style="width:${sz}px;height:${sz}px;animation-delay:-${hashStr(r.id) % 900}ms">${avatarSVG(p.avatar || {})}</div>
+        <span style="font-size:${nf}px">${esc(p.nick || '?')}</span></div>`;
+    }).join('');
+    return `<div class="grp" style="width:${w}px;--c:${profileColor(s, g.id)}"><div class="grp-head">${iconOf(g.id)} ${esc(nameOf(g.id))}<b>${n}</b></div><div class="grp-body">${people}</div></div>`;
+  }).join('');
+  return `<div class="final" style="background:var(--cream)"><h1>${title}<small>${total} jogadores</small></h1><div class="groups">${cols}</div>${confettiHTML(70)}</div>`;
 }
 
 function renderOverlay(s) {
@@ -556,7 +592,8 @@ function renderOverlay(s) {
   if (s.phase === 'lobby') { key = 'lobby'; }
   else if (s.phase === 'reveal' && s.showMatrix) { key = 'matrix:' + s.d + JSON.stringify(s.counts) + JSON.stringify(s.manual); html = () => matrixHTML(s); }
   else if (s.phase === 'final' && s.finalStep === 0) { key = 'fin0' + JSON.stringify([s.ranking, s.classScores]); html = () => finalTurmaHTML(s); }
-  else if (s.phase === 'final') { key = 'fin1' + JSON.stringify(s.ranking); html = () => finalRankHTML(s); }
+  else if (s.phase === 'final' && s.finalStep === 1) { key = 'fin1' + JSON.stringify(s.ranking); html = () => finalGroupsHTML(s); }
+  else if (s.phase === 'final') { key = 'fin2' + JSON.stringify(s.ranking); html = () => finalRankHTML(s); }
   else key = 'none';
   if (key !== overlayKey) {
     overlayKey = key;
@@ -588,6 +625,8 @@ function render(s) {
   document.getElementById('c-extend').classList.toggle('hidden', s.phase !== 'question');
   document.getElementById('c-matrix').classList.toggle('hidden', s.phase !== 'reveal');
   document.getElementById('c-matrix').textContent = s.showMatrix ? 'Esconder matriz' : 'Matriz';
+  document.getElementById('c-rank').classList.toggle('hidden', s.phase !== 'final');
+  document.getElementById('c-rank').textContent = rankToggleLabel(s);
   if (drawerMounted) updateAdmin(drawerAdmin, s);
 }
 
@@ -615,6 +654,7 @@ document.getElementById('c-next').onclick = doNext;
 document.getElementById('c-prev').onclick = () => send('host:prev');
 document.getElementById('c-extend').onclick = () => send('host:extend', { seconds: 15 });
 document.getElementById('c-matrix').onclick = () => send('host:matrix', {});
+document.getElementById('c-rank').onclick = () => { if (S && S.phase === 'final') send('host:final', { step: rankToggleStep(S) }); };
 document.getElementById('c-full').onclick = () => toggleFull();
 
 const drawer = document.getElementById('drawer');
@@ -636,6 +676,7 @@ addEventListener('keydown', e => {
   if (e.key === ' ' || e.key === 'ArrowRight' || e.key === 'Enter' || e.key === 'PageDown') { e.preventDefault(); wake(); doNext(); }
   else if (e.key === 'ArrowLeft' || e.key === 'PageUp') send('host:prev');
   else if (e.key === 'm' || e.key === 'M') send('host:matrix', {});
+  else if (e.key === 'r' || e.key === 'R') document.getElementById('c-rank').click();
   else if (e.key === 'f' || e.key === 'F') toggleFull();
   else if (e.key === 'a' || e.key === 'A') toggleDrawer();
   else if (e.key === 'h' || e.key === 'H') document.getElementById('controls').classList.toggle('hidden');

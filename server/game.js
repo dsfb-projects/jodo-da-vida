@@ -132,7 +132,12 @@ class Game {
     }
   }
 
-  lastFinalStep() { return this.content.mostrarRanking === false ? 0 : 1; }
+  // telas do fim: 0 resultado da turma, 1 grupos por perfil, 2 ranking
+  lastFinalStep() { return this.content.mostrarRanking === false ? 1 : 2; }
+
+  setFinalStep(n) {
+    if (this.phase === 'final' && Number.isInteger(n) && n >= 0 && n <= 2) this.finalStep = n;
+  }
 
   prev() {
     this.showMatrix = false;
