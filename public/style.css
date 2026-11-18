@@ -136,8 +136,8 @@ svg.avatar { overflow: visible; display: block; }
 .pawn .av { width: var(--sz, 64px); height: var(--sz, 64px); }
 .pawn .av svg { width: 100%; height: 100%; }
 .pawn .nick {
-  margin-top: 2px; background: rgba(255, 255, 255, .92); border-radius: 99px; padding: 0 8px; font-size: 13px; font-weight: 600;
-  white-space: nowrap; max-width: 120px; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 2px 0 rgba(0, 0, 0, .12);
+  margin-top: 2px; background: rgba(255, 255, 255, .92); border-radius: 99px; padding: 0 8px; font-size: var(--nf, 13px); font-weight: 600;
+  white-space: nowrap; max-width: calc(var(--sz, 64px) * 1.7); overflow: hidden; text-overflow: ellipsis; box-shadow: 0 2px 0 rgba(0, 0, 0, .12);
 }
 .pawn.offline { opacity: .45; filter: grayscale(.6); }
 .pawn .check {
@@ -197,13 +197,7 @@ svg.avatar { overflow: visible; display: block; }
 .final { position: absolute; inset: 0; padding: 36px 44px; }
 .final h1 { margin: 0 0 18px; font-size: 52px; }
 .final h1 small { font-size: 24px; color: var(--ink-soft); font-weight: 500; margin-left: 12px; }
-.final .cols { display: grid; grid-template-columns: 470px 560px 1fr; gap: 26px; height: 740px; }
-.verdict { padding: 18px 20px; margin-bottom: 16px; display: flex; gap: 14px; align-items: center; }
-.verdict .ic { font-size: 44px; }
-.verdict .tx { font-size: 23px; font-weight: 600; line-height: 1.2; }
-.verdict .sc { font-size: 17px; color: var(--ink-soft); margin-top: 4px; font-weight: 500; }
-.verdict.bad { background: #FFE9E5; border-color: #FFC9C0; }
-.verdict.good { background: #E3F8EC; border-color: #B7EBCD; }
+.final .cols { display: grid; grid-template-columns: 860px 1fr; gap: 26px; height: 740px; }
 .boxtitle { font-size: 24px; font-weight: 700; margin: 0 0 10px; }
 .ternary { padding: 14px; }
 .profiles .row { display: grid; grid-template-columns: 210px 1fr 70px; align-items: center; gap: 10px; margin: 10px 0; font-size: 19px; font-weight: 600; }
@@ -263,3 +257,47 @@ svg.avatar { overflow: visible; display: block; }
 .qrpage { min-height: 100%; display: grid; place-items: center; text-align: center; }
 .qrpage img { width: min(70vh, 80vw); height: min(70vh, 80vw); background: #fff; border-radius: 28px; padding: 20px; box-shadow: var(--shadow); }
 .qrpage .joinurl { font-size: 34px; display: inline-block; }
+
+/* ===== editor de personagem (passo 2): prévia fixa, só a grade rola ===== */
+.err { color: #B4232A; text-align: center; font-weight: 600; min-height: 1em; margin: 8px 0 0; }
+.bs {
+  position: fixed; inset: 0; max-width: 520px; margin: 0 auto; display: flex; flex-direction: column;
+  padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); height: 100dvh; background: var(--cream);
+}
+.bs-top { display: flex; align-items: center; gap: 14px; padding: 4px 4px 8px; }
+.bs-preview {
+  flex: none; width: 132px; height: 132px; border-radius: 30px; background: #fff; border: 2px solid var(--line);
+  display: grid; place-items: center; box-shadow: var(--shadow);
+}
+.bs-preview .hop { width: 104px; height: 104px; }
+.bs-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.bs-info small { color: var(--ink-soft); font-size: 14px; }
+.bs-info b { font-size: 24px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bs-info span { color: var(--ink-soft); font-size: 15px; }
+.bs-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.bs-tabs .tab {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 7px 2px; font-size: 13px;
+  border: 2px solid transparent; background: #F3EBDD; border-radius: 14px; font-weight: 600;
+}
+.bs-tabs .tab span { font-size: 20px; line-height: 1; }
+.bs-tabs .tab.on { background: var(--sun); border-color: var(--ink); }
+.bs-tabs .tab.dice { background: #fff; border-color: var(--line); }
+.bs-grid { flex: 1; min-height: 0; overflow-y: auto; margin-top: 8px; padding: 2px; -webkit-overflow-scrolling: touch; }
+.optgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.colorrow { background: #fff; border: 2px solid var(--line); border-radius: 14px; padding: 8px; margin-bottom: 8px; }
+.cr-label { font-weight: 600; font-size: 14px; margin-bottom: 6px; }
+.cr-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.opt.sw { padding: 2px; width: 44px; }
+.opt.sw svg.swatch { width: 34px; height: 34px; margin: 0; }
+.bs-bottom { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; padding-top: 10px; }
+.bs-bottom .btn { padding: 16px 10px; font-size: 19px; }
+.bs .err:empty { display: none; }
+
+/* ===== lista da sala no celular ===== */
+.roster-card { text-align: left; }
+.roster-title { font-size: 17px; margin-bottom: 10px; }
+.roster { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.rp { display: flex; flex-direction: column; align-items: center; font-size: 12px; font-weight: 600; padding: 6px 2px; border-radius: 12px; min-width: 0; }
+.rp svg.avatar { width: 46px; height: 46px; margin: 4px 0; }
+.rp span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rp.me { background: #FFF1B8; border: 2px solid var(--ink); }

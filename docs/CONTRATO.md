@@ -5,6 +5,7 @@ Todos os eventos usam ack (`socket.emit(evento, payload, resposta => …)`).
 ## Servidor → todos
 
 - `meta` → `{ phase, d, finalStep, deadline, serverNow, courses, config }`. Chega na conexão e a cada mudança (o celular usa para listar os cursos antes de entrar).
+- `roster` → `[{ id, nick, avatar }]`. Só no lobby, no máximo 1 por segundo: a lista "Na sala agora" do celular.
 
 ## Jogador
 
@@ -17,7 +18,7 @@ Todos os eventos usam ack (`socket.emit(evento, payload, resposta => …)`).
 
 Servidor → jogador: `state` (visão pessoal) e `kicked` (`{ reset }` quando o admin zerou tudo).
 
-Visão pessoal (`state`): `phase`, `d`, `finalStep`, `deadline`, `serverNow`, `config`, `me`, `decision` (com `efeito` só na revelação/final), `myVote`, `myScores`, `prevScores` (revelação) e `final` (`scores`, `equilibrio`, `total`, `profile`, `rank`, `of`, `classScores`).
+Visão pessoal (`state`): `phase`, `d`, `finalStep`, `deadline`, `serverNow`, `config`, `me`, `decision` (com `efeito` só na revelação/final), `myVote` e, só no final, `final` (`scores`, `equilibrio`, `total`, `profile`, `rank`, `of`, `classScores`). Os pontos não vão para o celular durante as decisões.
 
 ## Host / admin
 
@@ -25,7 +26,7 @@ Visão pessoal (`state`): `phase`, `d`, `finalStep`, `deadline`, `serverNow`, `c
 
 Comandos: `host:next`, `host:prev`, `host:close`, `host:extend { seconds }`, `host:matrix { show? }`, `host:manual { d, opt|null }`, `host:course:add { name }`, `host:course:remove { name }`, `host:kick { id }`, `host:reset { players }`.
 
-Visão do host: tudo da visão comum + `players[]` (`id, nick, course, avatar, connected, voted, vote`), `decision`, `allDecisions`, `showMatrix`, `manual`, `counts`, `classScores`, e no final `ranking[]` e `verdict[]`. Durante a votação o host só sabe **quem** votou, não **no quê**.
+Visão do host: tudo da visão comum + `players[]` (`id, nick, course, avatar, connected, voted, vote`), `decision`, `allDecisions`, `showMatrix`, `manual`, `counts`, `classScores`, e no final `ranking[]`. Durante a votação o host só sabe **quem** votou, não **no quê**.
 
 ## Avatar
 

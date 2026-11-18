@@ -11,6 +11,7 @@
   "limiarEquilibrio": 3,
   "segundosPorDecisao": 40,
   "encerrarAoZerar": true,
+  "mostrarRanking": true,
   "cursos": ["Ciência de Dados", "Publicidade e Propaganda"],
 
   "decisoes": [
@@ -62,11 +63,5 @@
     "pessoal": { "nome": "Perfil Pessoal", "descricao": "Colocou a vida pessoal na frente." },
     "profissional": { "nome": "Perfil Profissional", "descricao": "Apostou tudo na carreira." },
     "equilibrado": { "nome": "Equilibrado", "descricao": "Conseguiu segurar os três pilares." }
-  },
-
-  "veredito": {
-    "academica": { "ruim": "Vida acadêmica: vocês reprovaram na matéria / TCC reprovado", "bom": "PROVISÓRIO: Vida acadêmica: aprovados, TCC entregue" },
-    "pessoal": { "ruim": "Vida pessoal: vocês ficaram sem um date", "bom": "PROVISÓRIO: Vida pessoal: date confirmado" },
-    "profissional": { "ruim": "Vida profissional: a promoção não veio", "bom": "PROVISÓRIO: Vida profissional: promoção garantida" }
   }
 }

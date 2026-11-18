@@ -125,9 +125,14 @@ class Game {
         if (this.d < last) { this.phase = 'intro'; this.d += 1; }
         else { this.phase = 'final'; this.finalStep = 0; }
         break;
-      case 'final': this.finalStep = Math.min(this.finalStep + 1, 1); break;
+      case 'final':
+        if (this.finalStep < this.lastFinalStep()) this.finalStep += 1;
+        else this.resetRound(); // "voltar ao início": mantém os jogadores e zera os votos
+        break;
     }
   }
+
+  lastFinalStep() { return this.content.mostrarRanking === false ? 0 : 1; }
 
   prev() {
     this.showMatrix = false;
@@ -234,21 +239,16 @@ class Game {
     return s;
   }
 
-  verdict() {
-    const cs = this.classScores();
-    return this.pillarIds.map(id => ({
-      id,
-      score: cs[id],
-      ok: cs[id] >= this.content.pontosIniciais,
-      texto: cs[id] >= this.content.pontosIniciais ? this.content.veredito[id].bom : this.content.veredito[id].ruim,
-    }));
-  }
-
   voteCounts(d) {
     const n = this.decisions[d].opcoes.length;
     const counts = Array(n).fill(0);
     for (const p of this.activePlayers()) if (p.votes[d] != null) counts[p.votes[d]] += 1;
     return counts;
+  }
+
+  // quem está na sala, para a lista no celular durante o lobby
+  roster() {
+    return this.activePlayers().map(p => ({ id: p.id, nick: p.nick, avatar: p.avatar }));
   }
 
   // ---------- visões ----------
@@ -287,6 +287,7 @@ class Game {
         perfis: this.content.perfis,
         totalDecisoes: this.decisions.length,
         segundos: this.content.segundosPorDecisao,
+        mostrarRanking: this.content.mostrarRanking !== false,
       },
     };
   }
@@ -301,8 +302,6 @@ class Game {
       me: { id: p.id, nick: p.nick, course: p.course, avatar: p.avatar },
       decision: this.decisionView(this.d, revealing),
       myVote: this.d >= 0 ? (p.votes[this.d] ?? null) : null,
-      myScores: this.scoresOf(p),
-      prevScores: this.phase === 'reveal' ? this.scoresOf(p, this.d) : null,
     };
     if (this.phase === 'final') {
       const rows = this.ranking();
@@ -336,7 +335,6 @@ class Game {
     };
     if (this.phase === 'final') {
       view.ranking = this.ranking();
-      view.verdict = this.verdict();
     }
     return view;
   }

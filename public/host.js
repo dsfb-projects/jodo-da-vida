@@ -1,5 +1,5 @@
 import { avatarSVG, shade } from '/shared/avatar.js';
-import { mountAdmin, updateAdmin, connectHost, nextLabel, phaseLabel } from '/shared/controls.js';
+import { mountAdmin, updateAdmin, connectHost, nextLabel, phaseLabel, isResetStep, armOrRun } from '/shared/controls.js';
 
 const W = 1600, H = 900;
 const stage = document.getElementById('stage');
@@ -192,11 +192,14 @@ const pawns = new Map();
 let animating = false;
 
 function pawnSize(n, phase) {
-  if (phase === 'lobby') return n <= 20 ? 84 : n <= 36 ? 70 : n <= 56 ? 58 : 48;
+  if (phase === 'lobby') return n <= 12 ? 128 : n <= 20 ? 110 : n <= 30 ? 96 : n <= 42 ? 84 : n <= 56 ? 72 : 60;
   return n <= 16 ? 66 : n <= 32 ? 56 : n <= 50 ? 48 : 42;
 }
+function nickFont(sz, phase) {
+  return phase === 'lobby' ? Math.round(Math.max(16, Math.min(24, sz * 0.21))) : 13;
+}
 
-function ensurePawn(p, sz) {
+function ensurePawn(p, sz, nf = 13) {
   let pw = pawns.get(p.id);
   if (!pw) {
     const el = document.createElement('div');
@@ -212,6 +215,7 @@ function ensurePawn(p, sz) {
   if (avKey !== pw.avKey) { pw.el.querySelector('.hop').innerHTML = avatarSVG(p.avatar); pw.avKey = avKey; }
   if (p.nick !== pw.nick) { pw.el.querySelector('.nick').textContent = p.nick; pw.nick = p.nick; }
   pw.el.style.setProperty('--sz', sz + 'px');
+  pw.el.style.setProperty('--nf', nf + 'px');
   pw.sz = sz;
   pw.el.classList.toggle('offline', !p.connected);
   return pw;
@@ -289,9 +293,9 @@ function frame(now) {
 }
 function kick() { if (!animating) { animating = true; requestAnimationFrame(frame); } }
 
-function gridSpots(n, rect, sz, seedBase = 0) {
+function gridSpots(n, rect, sz, seedBase = 0, nf = 13) {
   if (!n) return [];
-  const cellH = sz + 26;
+  const cellH = sz + nf + 16;
   let cell = Math.sqrt((rect.w * rect.h) / n);
   cell = Math.min(cell, sz * 1.9);
   let cols = Math.max(1, Math.floor(rect.w / cell));
@@ -321,9 +325,10 @@ function layoutPawns(s) {
   const sz = pawnSize(players.length, s.phase);
 
   if (s.phase === 'lobby') {
-    const spots = gridSpots(players.length, { x: 690, y: 150, w: 840, h: 690 }, sz, 7);
+    const nf = nickFont(sz, 'lobby');
+    const spots = gridSpots(players.length, { x: 670, y: 125, w: 880, h: 690 }, sz, 7, nf);
     players.forEach((p, i) => {
-      const pw = ensurePawn(p, sz);
+      const pw = ensurePawn(p, sz, nf);
       pw.el.classList.remove('voted');
       pw.el.querySelector('.nick').style.display = '';
       tweenTo(pw, spots[i].x, spots[i].y, 500);
@@ -331,12 +336,14 @@ function layoutPawns(s) {
     return;
   }
 
+  // na revelação os nomes somem, para ninguém ficar exposto pela escolha
+  const showNames = s.phase !== 'reveal';
   const waiting = s.phase === 'reveal' ? players.filter(p => p.vote == null) : players;
   const spots = gridSpots(waiting.length, { x: PLAZA.x + 22, y: PLAZA.y + 40, w: PLAZA.w - 44, h: PLAZA.h - 60 }, sz, 11);
   waiting.forEach((p, i) => {
     const pw = ensurePawn(p, sz);
     pw.el.classList.toggle('voted', s.phase === 'question' && p.voted);
-    pw.el.querySelector('.nick').style.display = '';
+    pw.el.querySelector('.nick').style.display = showNames ? '' : 'none';
     tweenTo(pw, spots[i].x, spots[i].y, 500);
   });
 
@@ -351,7 +358,7 @@ function layoutPawns(s) {
       list.forEach((p, i) => {
         const pw = ensurePawn(p, sz);
         pw.el.classList.remove('voted');
-        pw.el.querySelector('.nick').style.display = list.length > 14 ? 'none' : '';
+        pw.el.querySelector('.nick').style.display = 'none';
         const lane = [0, -30, 30][i % 3];
         const t = tEnd - Math.floor(i / 3) * dt;
         const delay = Math.min(2200, order * 55) + (hashStr(p.id) % 250);
@@ -379,9 +386,7 @@ function renderHud(s) {
     status = `<div class="status"><div class="timer" id="timer">${secondsLeft() ?? ''}</div>
       <div class="count">${voted}/${players.length}<small>responderam · faltam ${players.length - voted}</small></div></div>`;
   } else if (s.phase === 'reveal') {
-    const cs = s.classScores || {};
-    status = `<div class="status" style="text-align:left"><div style="font-weight:700;font-size:20px;margin-bottom:6px">Média da turma</div>
-      ${s.config.pilares.map(p => `<div style="font-size:22px;font-weight:600">${p.icone} ${cs[p.id] ?? ''}</div>`).join('')}</div>`;
+    status = `<div class="status"><div class="count">${voted}/${players.length}<small>responderam</small></div></div>`;
   } else {
     status = `<div class="status"><div class="count">${players.length}<small>jogadores</small></div></div>`;
   }
@@ -400,7 +405,7 @@ function lobbyHTML(s) {
       <div class="sub">${esc(s.config.subtitulo || '')}</div>
       <div class="qrbox"><img src="/qr.svg" alt="QR code"></div>
       <div class="joinurl" id="joinurl">${esc(prettyUrl(joinUrl))}</div>
-      <div class="sub" style="margin-top:14px">Escaneie, escolha seu nick e monte seu personagem</div>
+      <div class="sub" style="margin-top:14px">Escaneie, escolha seu apelido e monte seu personagem</div>
     </div>
     <div class="courses" id="lobby-courses"></div>
     <div class="counter" id="lobby-count"></div>
@@ -480,7 +485,7 @@ function ternarySVG(s) {
   const cp = toXY(s.classScores);
   g += `<g transform="translate(${cp.x} ${cp.y})"><path d="M0 -18 L5 -6 L18 -6 L8 2 L12 15 L0 7 L-12 15 L-8 2 L-18 -6 L-5 -6 Z" fill="#FFD449" stroke="#2B2140" stroke-width="2.5" stroke-linejoin="round"/>
     <text x="0" y="36" text-anchor="middle" font-size="16" font-weight="700" fill="#2B2140" font-family="Fredoka, Nunito, system-ui, sans-serif">turma</text></g>`;
-  return `<svg viewBox="0 0 520 470" width="520" height="470">${g}</svg>
+  return `<svg viewBox="0 0 520 470" width="680" height="615" style="display:block;margin:0 auto">${g}</svg>
     <div style="display:flex;gap:18px;flex-wrap:wrap;font-size:17px;color:var(--ink-soft);margin-top:10px;padding:0 6px">
       <span>● cada ponto = 1 pessoa (cor do perfil)</span><span>⭐ média da turma</span><span>◌ centro = equilíbrio</span></div>
     <div style="font-size:16px;color:var(--ink-soft);margin-top:8px;padding:0 6px">Quanto mais perto de um canto, mais aquele pilar pesou nas escolhas.</div>`;
@@ -489,11 +494,6 @@ function ternarySVG(s) {
 function finalTurmaHTML(s) {
   const rk = s.ranking || [];
   const n = rk.length;
-  const verdict = (s.verdict || []).map(v => {
-    const p = s.config.pilares.find(x => x.id === v.id);
-    return `<div class="card verdict ${v.ok ? 'good' : 'bad'}"><div class="ic">${v.ok ? '🎉' : '💀'}</div><div><div class="tx">${esc(v.texto)}</div>
-      <div class="sc">${p.icone} média ${v.score} · começou em ${s.config.pontosIniciais}</div></div></div>`;
-  }).join('');
   const prof = {};
   rk.forEach(r => { prof[r.profile] = (prof[r.profile] || 0) + 1; });
   const profRows = PROFILE_ORDER.map(id => {
@@ -504,7 +504,7 @@ function finalTurmaHTML(s) {
   const byCourse = {};
   const playersById = Object.fromEntries((s.players || []).map(p => [p.id, p]));
   rk.forEach(r => {
-    const c = (playersById[r.id] || {}).course || '—';
+    const c = (playersById[r.id] || {}).course || 'Sem curso';
     (byCourse[c] = byCourse[c] || []).push(r.scores);
   });
   const courseRows = Object.entries(byCourse).map(([c, list]) => {
@@ -515,7 +515,6 @@ function finalTurmaHTML(s) {
   return `<div class="final" style="background:var(--cream)">
     <h1>Resultado da turma<small>${n ? `média de ${n} jogadores` : 'modo manual'}</small></h1>
     <div class="cols">
-      <div>${verdict}</div>
       <div class="card ternary"><div class="boxtitle">Onde cada um terminou</div>${ternarySVG(s)}</div>
       <div>
         <div class="card profiles" style="padding:16px 18px"><div class="boxtitle">Perfis</div>${profRows}</div>
@@ -556,7 +555,7 @@ function renderOverlay(s) {
   let key, html;
   if (s.phase === 'lobby') { key = 'lobby'; }
   else if (s.phase === 'reveal' && s.showMatrix) { key = 'matrix:' + s.d + JSON.stringify(s.counts) + JSON.stringify(s.manual); html = () => matrixHTML(s); }
-  else if (s.phase === 'final' && s.finalStep === 0) { key = 'fin0' + JSON.stringify([s.ranking, s.verdict]); html = () => finalTurmaHTML(s); }
+  else if (s.phase === 'final' && s.finalStep === 0) { key = 'fin0' + JSON.stringify([s.ranking, s.classScores]); html = () => finalTurmaHTML(s); }
   else if (s.phase === 'final') { key = 'fin1' + JSON.stringify(s.ranking); html = () => finalRankHTML(s); }
   else key = 'none';
   if (key !== overlayKey) {
@@ -584,7 +583,8 @@ function render(s) {
   layoutPawns(s);
   // controles
   document.getElementById('c-phase').textContent = phaseLabel(s);
-  document.getElementById('c-next').textContent = nextLabel(s);
+  const nb = document.getElementById('c-next');
+  if (!nb.dataset.armed) nb.textContent = nextLabel(s);
   document.getElementById('c-extend').classList.toggle('hidden', s.phase !== 'question');
   document.getElementById('c-matrix').classList.toggle('hidden', s.phase !== 'reveal');
   document.getElementById('c-matrix').textContent = s.showMatrix ? 'Esconder matriz' : 'Matriz';
@@ -606,7 +606,12 @@ document.getElementById('enter').onclick = () => conn.setKey(document.getElement
 document.getElementById('key').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('enter').click(); });
 
 const send = (ev, p) => conn.send(ev, p);
-document.getElementById('c-next').onclick = () => send('host:next');
+function doNext() {
+  const nb = document.getElementById('c-next');
+  if (isResetStep(S)) armOrRun(nb, () => send('host:next'));
+  else send('host:next');
+}
+document.getElementById('c-next').onclick = doNext;
 document.getElementById('c-prev').onclick = () => send('host:prev');
 document.getElementById('c-extend').onclick = () => send('host:extend', { seconds: 15 });
 document.getElementById('c-matrix').onclick = () => send('host:matrix', {});
@@ -628,7 +633,7 @@ function toggleFull() {
 
 addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') return;
-  if (e.key === ' ' || e.key === 'ArrowRight' || e.key === 'Enter' || e.key === 'PageDown') { e.preventDefault(); send('host:next'); }
+  if (e.key === ' ' || e.key === 'ArrowRight' || e.key === 'Enter' || e.key === 'PageDown') { e.preventDefault(); wake(); doNext(); }
   else if (e.key === 'ArrowLeft' || e.key === 'PageUp') send('host:prev');
   else if (e.key === 'm' || e.key === 'M') send('host:matrix', {});
   else if (e.key === 'f' || e.key === 'F') toggleFull();

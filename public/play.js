@@ -7,10 +7,23 @@ const netEl = document.getElementById('net');
 
 const socket = io({ reconnectionDelay: 400, reconnectionDelayMax: 2000, timeout: 8000 });
 
+// Abas do editor. As cores de acessório e de veículo ficam dentro da aba do item.
+const GROUPS = [
+  { key: 'c', label: 'Cor', icon: '🎨' },
+  { key: 's', label: 'Formato', icon: '🔷' },
+  { key: 'e', label: 'Olhos', icon: '👀' },
+  { key: 'm', label: 'Boca', icon: '👄' },
+  { key: 't', label: 'Cabeça', icon: '🎩', color: { key: 'k', label: 'Cor do acessório', list: ACCENT_COLORS } },
+  { key: 'g', label: 'Óculos', icon: '👓' },
+  { key: 'v', label: 'Veículo', icon: '🛹', color: { key: 'vc', label: 'Cor do veículo', list: VEHICLE_COLORS } },
+];
+
 let meta = null;      // config + cursos (chega antes de entrar)
 let state = null;     // estado pessoal
+let roster = [];      // quem está na sala (só no lobby)
 let offset = 0;       // relógio do servidor - relógio local
-let editing = false;  // editor de personagem aberto depois de entrar
+let editing = false;  // editor aberto depois de entrar
+let step = 'info';    // 'info' (apelido e curso) ou 'avatar'
 let message = null;   // tela de aviso (removido etc.)
 let tab = 'c';
 let draft = loadProfile() || { nick: '', course: '', avatar: randomAvatar() };
@@ -64,7 +77,11 @@ socket.on('disconnect', () => setOffline(true));
 socket.on('meta', m => {
   meta = m;
   offset = m.serverNow - Date.now();
-  if (!state || editing) updateCourseChips();
+  if ((!state || editing) && step === 'info') updateCourseChips();
+});
+socket.on('roster', list => {
+  roster = Array.isArray(list) ? list : [];
+  updateRoster();
 });
 socket.on('state', s => {
   state = s;
@@ -76,6 +93,7 @@ socket.on('kicked', m => {
   forgetMe();
   state = null;
   editing = false;
+  step = 'info';
   message = m && m.reset ? null : 'Você foi removido do jogo por um admin.';
   render(true);
 });
@@ -96,17 +114,14 @@ window.addEventListener('online', () => { if (!socket.connected) socket.connect(
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const cfg = () => (state && state.config) || (meta && meta.config) || { pilares: [], pontosIniciais: 10 };
 
-function barsHTML(scores, prev, deltas) {
+function barsHTML(scores) {
   const c = cfg();
   const max = c.pontosIniciais * 2;
   return `<div class="bars">${c.pilares.map(p => {
     const v = scores[p.id];
-    const start = prev ? prev[p.id] : v;
-    const pct = x => Math.max(3, Math.min(100, (x / max) * 100));
-    const d = deltas ? deltas[p.id] : null;
-    const dTag = d == null ? '' : `<span class="delta ${d > 0 ? 'pos' : d < 0 ? 'neg' : 'zero'}">${d > 0 ? '+' : ''}${d}</span>`;
-    return `<div class="bar"><div class="lbl"><span>${p.icone} ${esc(p.nome)}${dTag}</span><span>${v}</span></div>
-      <div class="track"><div class="fill" data-to="${pct(v)}" style="width:${pct(start)}%;background:${p.cor}"></div></div></div>`;
+    const pct = Math.max(3, Math.min(100, (v / max) * 100));
+    return `<div class="bar"><div class="lbl"><span>${p.icone} ${esc(p.nome)}</span><span>${v}</span></div>
+      <div class="track"><div class="fill" data-to="${pct}" style="width:3%;background:${p.cor}"></div></div></div>`;
   }).join('')}</div>`;
 }
 function animateBars() {
@@ -120,93 +135,118 @@ function previewHTML(avatar, nick, size = 130) {
     <div class="shadow"></div>${nick != null ? `<div class="nickbubble">${esc(nick)}</div>` : ''}</div>`;
 }
 
-// ---------- editor de personagem ----------
-function builderHTML(isJoin) {
-  return `
-    <div class="brand"><h1>Jogo da <span>Vida</span></h1><small>${isJoin ? 'Monte seu personagem e entre' : 'Edite seu personagem'}</small></div>
-    <div class="preview"><div class="stagebox"><div class="hop" id="pv" style="width:130px;height:130px"></div></div><div class="shadow"></div><div class="nickbubble" id="nb"></div></div>
-    <div class="field"><label for="nick">Seu nick</label><input id="nick" type="text" maxlength="16" placeholder="ex.: Wellzinho" autocomplete="off" autocapitalize="off" value="${esc(draft.nick)}"></div>
+// ---------- passo 1: apelido e curso ----------
+function mountInfo(isJoin) {
+  app.className = 'play';
+  app.innerHTML = `
+    <div class="brand"><h1>Jogo da <span>Vida</span></h1><small>Passo 1 de 2</small></div>
+    ${previewHTML(draft.avatar, null, 110)}
+    <div class="field"><label for="nick">Seu apelido</label><input id="nick" type="text" maxlength="16" placeholder="Seu apelido" autocomplete="off" autocapitalize="off" value="${esc(draft.nick)}"></div>
     <div class="field"><label>Seu curso</label><div class="chips" id="courses"></div></div>
-    <div class="card builder">
-      <div class="tabs" id="tabs">${TABS.map(t => `<button class="tab ${t.key === tab ? 'on' : ''}" data-tab="${t.key}">${t.label}</button>`).join('')}</div>
-      <div class="grid" id="grid"></div>
-      <div class="dice"><button class="btn ghost small" id="dice">🎲 Aleatório</button></div>
-    </div>
-    <div style="margin-top:18px"><button class="btn big coral" id="go">${isJoin ? 'Entrar no jogo' : 'Salvar'}</button></div>
-    <p id="err" style="color:#B4232A;text-align:center;font-weight:600"></p>`;
-}
-
-function updatePreview() {
-  const pv = document.getElementById('pv');
-  if (pv) pv.innerHTML = avatarSVG(draft.avatar);
-  const nb = document.getElementById('nb');
-  if (nb) nb.textContent = draft.nick.trim() || 'seu nick';
-}
-
-function updateCourseChips() {
-  const box = document.getElementById('courses');
-  if (!box) return;
-  const list = (meta && meta.courses) || [];
-  if (!list.includes(draft.course)) draft.course = list[0] || '';
-  box.innerHTML = list.map(c => `<button class="chip ${c === draft.course ? 'on' : ''}" data-course="${esc(c)}">${esc(c)}</button>`).join('');
-}
-
-function updateGrid() {
-  const grid = document.getElementById('grid');
-  if (!grid) return;
-  const t = TABS.find(x => x.key === tab);
-  let html = '';
-  for (let i = 0; i < t.count; i++) {
-    const on = draft.avatar[t.key] === i ? 'on' : '';
-    let thumb;
-    if (t.key === 'k') thumb = swatchSVG(ACCENT_COLORS[i]);
-    else if (t.key === 'vc') thumb = swatchSVG(VEHICLE_COLORS[i]);
-    else thumb = avatarSVG({ ...draft.avatar, [t.key]: i });
-    html += `<button class="opt ${on}" data-i="${i}">${thumb}<span>${t.names ? t.names[i] : '&nbsp;'}</span></button>`;
-  }
-  grid.innerHTML = html;
-}
-
-function mountBuilder(isJoin) {
-  app.innerHTML = builderHTML(isJoin);
-  updatePreview();
+    <div style="margin-top:22px"><button class="btn big coral" id="next">Montar personagem ▶</button></div>
+    <p id="err" class="err"></p>
+    ${isJoin ? '' : '<div style="margin-top:6px"><button class="btn ghost big" id="cancel">Cancelar</button></div>'}`;
   updateCourseChips();
-  updateGrid();
   const nick = document.getElementById('nick');
-  nick.addEventListener('input', () => { draft.nick = nick.value; updatePreview(); });
-  document.getElementById('tabs').addEventListener('click', e => {
-    const b = e.target.closest('[data-tab]');
-    if (!b) return;
-    tab = b.dataset.tab;
-    document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x.dataset.tab === tab));
-    updateGrid();
-  });
-  document.getElementById('grid').addEventListener('click', e => {
-    const b = e.target.closest('[data-i]');
-    if (!b) return;
-    draft.avatar[tab] = Number(b.dataset.i);
-    updatePreview();
-    updateGrid();
-  });
+  nick.addEventListener('input', () => { draft.nick = nick.value; });
+  nick.addEventListener('keydown', e => { if (e.key === 'Enter') nick.blur(); });
   document.getElementById('courses').addEventListener('click', e => {
     const b = e.target.closest('[data-course]');
     if (!b) return;
     draft.course = b.dataset.course;
     updateCourseChips();
+    document.getElementById('err').textContent = '';
   });
-  document.getElementById('dice').addEventListener('click', () => { draft.avatar = randomAvatar(); updatePreview(); updateGrid(); });
-  document.getElementById('go').addEventListener('click', submit);
-  nick.addEventListener('keydown', e => { if (e.key === 'Enter') nick.blur(); });
+  document.getElementById('next').onclick = () => {
+    const err = document.getElementById('err');
+    if (!draft.nick.trim()) { err.textContent = 'Escolha um apelido 🙂'; nick.focus(); return; }
+    if (!draft.course) { err.textContent = 'Escolha o seu curso 🙂'; return; }
+    step = 'avatar';
+    render(true);
+  };
+  const cancel = document.getElementById('cancel');
+  if (cancel) cancel.onclick = () => { editing = false; step = 'info'; render(true); };
+}
+
+function updateCourseChips() {
+  const box = document.getElementById('courses');
+  if (!box) return;
+  const list = (meta && meta.courses) || (state && state.courses) || [];
+  if (draft.course && list.length && !list.includes(draft.course)) draft.course = '';
+  box.innerHTML = list.map(c => `<button class="chip ${c === draft.course ? 'on' : ''}" data-course="${esc(c)}">${esc(c)}</button>`).join('');
+}
+
+// ---------- passo 2: personagem ----------
+function mountAvatar(isJoin) {
+  app.className = 'play';
+  app.innerHTML = `
+    <div class="bs">
+      <div class="bs-top">
+        <div class="bs-preview"><div class="hop" id="pv"></div></div>
+        <div class="bs-info"><small>Passo 2 de 2</small><b>${esc(draft.nick.trim())}</b><span>${esc(draft.course)}</span></div>
+      </div>
+      <div class="bs-tabs" id="tabs">
+        ${GROUPS.map(g => `<button class="tab ${g.key === tab ? 'on' : ''}" data-tab="${g.key}"><span>${g.icon}</span>${g.label}</button>`).join('')}
+        <button class="tab dice" id="dice"><span>🎲</span>Sortear</button>
+      </div>
+      <div class="bs-grid" id="grid"></div>
+      <div class="bs-bottom">
+        <button class="btn ghost" id="back">◀ Voltar</button>
+        <button class="btn coral" id="go">${isJoin ? 'Entrar no jogo' : 'Salvar'}</button>
+      </div>
+      <p id="err" class="err"></p>
+    </div>`;
+  updatePreview();
+  updateGrid();
+  document.getElementById('tabs').addEventListener('click', e => {
+    const b = e.target.closest('[data-tab]');
+    if (!b) return;
+    tab = b.dataset.tab;
+    document.querySelectorAll('.tab[data-tab]').forEach(x => x.classList.toggle('on', x.dataset.tab === tab));
+    updateGrid();
+    document.getElementById('grid').scrollTop = 0;
+  });
+  document.getElementById('grid').addEventListener('click', e => {
+    const b = e.target.closest('[data-i]');
+    if (!b) return;
+    draft.avatar[b.dataset.k] = Number(b.dataset.i);
+    updatePreview();
+    updateGrid();
+  });
+  document.getElementById('dice').onclick = () => { draft.avatar = randomAvatar(); updatePreview(); updateGrid(); };
+  document.getElementById('back').onclick = () => { step = 'info'; render(true); };
+  document.getElementById('go').onclick = submit;
+}
+
+function updatePreview() {
+  const pv = document.getElementById('pv');
+  if (pv) pv.innerHTML = avatarSVG(draft.avatar);
+}
+
+function updateGrid() {
+  const grid = document.getElementById('grid');
+  if (!grid) return;
+  const g = GROUPS.find(x => x.key === tab);
+  const t = TABS.find(x => x.key === tab);
+  let html = '';
+  if (g.color) {
+    html += `<div class="colorrow"><div class="cr-label">${g.color.label}</div><div class="cr-list">${g.color.list.map((c, i) =>
+      `<button class="opt sw ${draft.avatar[g.color.key] === i ? 'on' : ''}" data-k="${g.color.key}" data-i="${i}">${swatchSVG(c)}</button>`).join('')}</div></div>`;
+  }
+  html += '<div class="optgrid">';
+  for (let i = 0; i < t.count; i++) {
+    const on = draft.avatar[t.key] === i ? 'on' : '';
+    html += `<button class="opt ${on}" data-k="${t.key}" data-i="${i}">${avatarSVG({ ...draft.avatar, [t.key]: i })}<span>${t.names ? t.names[i] : '&nbsp;'}</span></button>`;
+  }
+  grid.innerHTML = html + '</div>';
 }
 
 function submit() {
   const err = document.getElementById('err');
-  const nick = draft.nick.trim();
-  if (!nick) { err.textContent = 'Escolha um nick 🙂'; document.getElementById('nick').focus(); return; }
   const go = document.getElementById('go');
   go.disabled = true;
   keepAwake();
-  socket.emit('player:join', { id: myId() || undefined, nick, course: draft.course, avatar: draft.avatar }, res => {
+  socket.emit('player:join', { id: myId() || undefined, nick: draft.nick.trim(), course: draft.course, avatar: draft.avatar }, res => {
     go.disabled = false;
     if (!res || !res.ok) { err.textContent = (res && res.error) || 'Não deu pra entrar, tenta de novo.'; return; }
     state = res.state;
@@ -214,9 +254,26 @@ function submit() {
     draft = { nick: state.me.nick, course: state.me.course, avatar: { ...state.me.avatar } };
     saveMe(res.id, draft);
     editing = false;
+    step = 'info';
     message = null;
     render(true);
   });
+}
+
+// ---------- lista da sala (lobby) ----------
+function rosterHTML() {
+  const me = state && state.me;
+  const list = [...roster].sort((a, b) => (me && b.id === me.id) - (me && a.id === me.id));
+  return list.map(p => {
+    const mine = me && p.id === me.id;
+    return `<div class="rp ${mine ? 'me' : ''}">${avatarSVG(p.avatar)}<span>${mine ? 'Você' : esc(p.nick)}</span></div>`;
+  }).join('');
+}
+function updateRoster() {
+  const box = document.getElementById('roster');
+  if (box) box.innerHTML = rosterHTML();
+  const n = document.getElementById('roster-n');
+  if (n) n.textContent = roster.length;
 }
 
 // ---------- telas do jogo ----------
@@ -228,10 +285,11 @@ function screenHTML(s) {
     case 'lobby':
       return `${previewHTML(me.avatar, me.nick)}
         <div class="card panel"><span class="kicker">${esc(me.course)}</span>
-          <h2>Você está no jogo!</h2><p>Aguarde a gente dar o play 🎬</p>
-          <div style="margin-top:14px"><button class="btn ghost" id="edit">✏️ Editar personagem</button></div></div>`;
+          <h2>Você está no jogo!</h2><p class="lookup">👀 Confira se você apareceu no telão</p><p>Aguarde a gente dar o play 🎬</p>
+          <div style="margin-top:14px"><button class="btn ghost" id="edit">✏️ Editar personagem</button></div></div>
+        <div class="card panel roster-card"><div class="roster-title">Na sala agora: <b id="roster-n">${roster.length}</b></div><div class="roster" id="roster">${rosterHTML()}</div></div>`;
     case 'intro':
-      return `<div class="card panel">${kicker}<h2>${esc(dec.titulo)}</h2><p>${esc(dec.cenario)}</p><div class="lookup">👀 Olhe para a tela</div></div>
+      return `<div class="card panel">${kicker}<h2>${esc(dec.titulo)}</h2><p>${esc(dec.cenario)}</p><div class="lookup">👀 Olhe para o telão</div></div>
         ${previewHTML(me.avatar, null, 100)}`;
     case 'question': {
       if (s.myVote != null) {
@@ -244,20 +302,24 @@ function screenHTML(s) {
         <div class="options">${dec.opcoes.map((o, i) => `<button class="optbtn c${i % 4}" data-opt="${i}"><span class="ico">${o.icone}</span>${esc(o.texto)}</button>`).join('')}</div>`;
     }
     case 'reveal': {
+      // sem pontos aqui: ver quanto perdeu em cada decisão enviesaria as próximas escolhas
       if (s.myVote == null) {
-        return `<div class="card panel">${kicker}<div class="big-emoji">😶</div><h2>Você não respondeu a tempo</h2><p>Seus ${esc(cfg().nomePilares)} ficaram iguais.</p>${barsHTML(s.myScores)}</div>`;
+        return `<div class="card panel">${kicker}<div class="big-emoji">😶</div><h2>Você não respondeu a tempo</h2><p class="lookup">👀 Olhe para o telão</p></div>`;
       }
       const o = dec.opcoes[s.myVote];
       return `<div class="card panel">${kicker}<div class="big-emoji">${o.icone}</div><h2>Você foi de ${esc(o.texto)}</h2>
-        ${barsHTML(s.myScores, s.prevScores, o.efeito)}</div>${previewHTML(me.avatar, null, 90)}`;
+        <p class="lookup">👀 Veja no telão o caminho da turma</p></div>${previewHTML(me.avatar, null, 110)}`;
     }
     case 'final': {
       const f = s.final;
       if (!f) return `<div class="card panel"><h2>Fim de jogo!</h2></div>`;
       const perfil = cfg().perfis[f.profile] || { nome: f.profile, descricao: '' };
-      const rank = s.finalStep >= 1
-        ? `<div class="rank">#${f.rank}</div><p>de ${f.of} jogadores no ranking de equilíbrio</p>`
-        : `<p class="lookup">👀 O ranking vai aparecer na tela</p>`;
+      let rank = '';
+      if (cfg().mostrarRanking !== false) {
+        rank = s.finalStep >= 1
+          ? `<div class="rank">#${f.rank}</div><p>de ${f.of} jogadores no ranking de equilíbrio</p>`
+          : `<p class="lookup">👀 O ranking vai aparecer no telão</p>`;
+      }
       return `${previewHTML(me.avatar, me.nick, 110)}
         <div class="card panel"><span class="kicker">Seu resultado</span><div class="profile-name">${esc(perfil.nome)}</div><p>${esc(perfil.descricao)}</p>
         ${barsHTML(f.scores)}<p><b>Nota de equilíbrio: ${f.equilibrio}</b> (seu pilar mais baixo)</p>${rank}</div>`;
@@ -269,18 +331,20 @@ function screenHTML(s) {
 
 function render(force) {
   if (message && !state) {
+    app.className = 'play';
     app.innerHTML = `<div class="brand"><h1>Jogo da <span>Vida</span></h1></div><div class="card panel"><h2>Ops</h2><p>${esc(message)}</p>
       <div style="margin-top:14px"><button class="btn coral" id="again">Entrar de novo</button></div></div>`;
     document.getElementById('again').onclick = () => { message = null; render(true); };
     lastRenderKey = 'msg';
     return;
   }
-  if (!state || !state.me) {
-    if (lastRenderKey !== 'join' || force) { mountBuilder(true); lastRenderKey = 'join'; }
-    return;
-  }
-  if (editing) {
-    if (lastRenderKey !== 'edit') { mountBuilder(false); lastRenderKey = 'edit'; }
+  if (!state || !state.me || editing) {
+    const isJoin = !state || !state.me;
+    const key = `builder:${step}:${isJoin}`;
+    if (lastRenderKey !== key || force) {
+      if (step === 'avatar') mountAvatar(isJoin); else mountInfo(isJoin);
+      lastRenderKey = key;
+    }
     return;
   }
   const s = state;
@@ -288,10 +352,11 @@ function render(force) {
   const key = JSON.stringify([s.phase, s.d, s.finalStep, s.myVote, s.me, s.final && s.final.rank, s.final && s.final.of]);
   if (key === lastRenderKey && !force) return;
   lastRenderKey = key;
+  app.className = 'play';
   app.innerHTML = screenHTML(s);
   animateBars();
   const edit = document.getElementById('edit');
-  if (edit) edit.onclick = () => { draft = { nick: s.me.nick, course: s.me.course, avatar: { ...s.me.avatar } }; editing = true; render(); };
+  if (edit) edit.onclick = () => { draft = { nick: s.me.nick, course: s.me.course, avatar: { ...s.me.avatar } }; editing = true; step = 'info'; render(true); };
   app.querySelectorAll('[data-opt]').forEach(b => {
     b.onclick = () => {
       app.querySelectorAll('[data-opt]').forEach(x => { x.disabled = true; });

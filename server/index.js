@@ -61,6 +61,22 @@ function sendPlayer(id) {
   for (const sid of set) io.to(sid).emit('state', view);
 }
 
+// lista da sala para os celulares (só no lobby), no máximo 1 envio por segundo
+let rosterTimer = null;
+let rosterDirty = false;
+function sendRoster() {
+  rosterDirty = true;
+  if (rosterTimer) return;
+  const flush = () => {
+    rosterTimer = null;
+    if (!rosterDirty) return;
+    rosterDirty = false;
+    if (game.phase === 'lobby') io.emit('roster', game.roster());
+    rosterTimer = setTimeout(flush, 1000);
+  };
+  flush();
+}
+
 let hostTimer = null;
 function sendHosts() {
   // agrupa rajadas (ex.: 40 votos em 2 segundos) num envio só
@@ -73,6 +89,7 @@ function sendHosts() {
 
 function broadcastAll() {
   io.emit('meta', game.common());
+  if (game.phase === 'lobby') sendRoster();
   for (const id of socketsOf.keys()) sendPlayer(id);
   sendHosts();
   scheduleAutoClose();
@@ -119,6 +136,7 @@ function ack(fn, payload) { if (typeof fn === 'function') fn(payload); }
 
 io.on('connection', socket => {
   socket.emit('meta', game.common());
+  if (game.phase === 'lobby') socket.emit('roster', game.roster());
 
   // ----- jogador -----
   // hello: reconexão. Se o servidor não conhece o id (reiniciou), recria com o perfil guardado no celular.
@@ -135,6 +153,7 @@ io.on('connection', socket => {
     bind(socket, p.id);
     ack(fn, { ok: true, id: p.id, state: game.playerView(p.id) });
     sendHosts();
+    sendRoster();
   });
 
   socket.on('player:join', (msg, fn) => {
@@ -143,6 +162,7 @@ io.on('connection', socket => {
     bind(socket, r.player.id);
     ack(fn, { ok: true, id: r.player.id, state: game.playerView(r.player.id) });
     sendHosts();
+    sendRoster();
   });
 
   socket.on('player:vote', (msg, fn) => {

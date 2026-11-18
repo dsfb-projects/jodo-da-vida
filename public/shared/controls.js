@@ -3,6 +3,22 @@ import { avatarSVG } from '/shared/avatar.js';
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+const lastFinal = s => (s.config && s.config.mostrarRanking === false ? 0 : 1);
+export const isResetStep = s => !!s && s.phase === 'final' && s.finalStep >= lastFinal(s);
+
+// "Voltar ao início" apaga os votos: pede um segundo toque em até 3 s
+export function armOrRun(btn, run) {
+  if (btn.dataset.armed) {
+    delete btn.dataset.armed;
+    clearTimeout(btn._armTimer);
+    run();
+    return;
+  }
+  btn.dataset.armed = '1';
+  btn.textContent = 'Toque de novo pra voltar ao início';
+  btn._armTimer = setTimeout(() => { delete btn.dataset.armed; btn.textContent = '🔄 Voltar ao início'; }, 3000);
+}
+
 export function nextLabel(s) {
   const last = s.config.totalDecisoes - 1;
   switch (s.phase) {
@@ -10,7 +26,7 @@ export function nextLabel(s) {
     case 'intro': return '▶ Abrir votação';
     case 'question': return '⏹ Encerrar votação';
     case 'reveal': return s.d < last ? '▶ Próxima decisão' : '🏁 Ver resultado';
-    case 'final': return s.finalStep < 1 ? '🏆 Mostrar ranking' : '✔ Fim';
+    case 'final': return s.finalStep < lastFinal(s) ? '🏆 Mostrar ranking' : '🔄 Voltar ao início';
     default: return 'Próximo';
   }
 }
@@ -27,13 +43,15 @@ export function phaseLabel(s) {
   }
 }
 
+let lastState = null;
+
 export function mountAdmin(root, send) {
   root.innerHTML = `
     <div class="card status" id="a-status"></div>
     <div class="mainbtns"><button class="btn ghost" data-act="prev">◀ Voltar</button><button class="btn coral" data-act="next" id="a-next">Próximo</button></div>
     <div class="row2"><button class="btn ghost" data-act="extend">+15 s</button><button class="btn ghost" data-act="matrix" id="a-matrix">Matriz</button></div>
     <h2>Modo manual (escolha da turma)</h2>
-    <p style="margin:0 0 8px;color:var(--ink-soft);font-size:14px">Se o celular do pessoal falhar, marque aqui o que a turma escolheu. Vale para a média e o veredito da turma.</p>
+    <p style="margin:0 0 8px;color:var(--ink-soft);font-size:14px">Se o celular do pessoal falhar, marque aqui o que a turma escolheu. Vale para a média da turma (a estrela no gráfico final).</p>
     <div id="a-manual"></div>
     <h2>Cursos</h2>
     <div class="chips" id="a-courses"></div>
@@ -55,7 +73,10 @@ export function mountAdmin(root, send) {
       return;
     }
     const act = b.dataset.act;
-    if (act === 'next') send('host:next');
+    if (act === 'next') {
+      if (isResetStep(lastState)) armOrRun(b, () => send('host:next'));
+      else send('host:next');
+    }
     else if (act === 'prev') send('host:prev');
     else if (act === 'extend') send('host:extend', { seconds: 15 });
     else if (act === 'matrix') send('host:matrix', {});
@@ -75,12 +96,14 @@ export function mountAdmin(root, send) {
 }
 
 export function updateAdmin(root, s) {
+  lastState = s;
   const players = s.players || [];
   const online = players.filter(p => p.connected).length;
   const voted = players.filter(p => p.voted).length;
   const vote = s.phase === 'question' ? `<div style="margin-top:6px">✅ ${voted} de ${players.length} responderam · faltam <b>${players.length - voted}</b></div>` : '';
   root.querySelector('#a-status').innerHTML = `<b>${esc(phaseLabel(s))}</b><div style="margin-top:4px;color:var(--ink-soft)">${players.length} jogadores · ${online} online</div>${vote}`;
-  root.querySelector('#a-next').textContent = nextLabel(s);
+  const nb = root.querySelector('#a-next');
+  if (!nb.dataset.armed) nb.textContent = nextLabel(s);
   const mx = root.querySelector('#a-matrix');
   mx.disabled = s.phase !== 'reveal';
   mx.textContent = s.showMatrix ? 'Esconder matriz' : 'Mostrar matriz';
